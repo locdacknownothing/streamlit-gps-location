@@ -26,5 +26,4 @@ if not _RELEASE:
     return_value = _gps_location(display=True)
     st.write("Return value:", return_value)
 else:
-    gps_location = _gps_location
-    
+    gps_location_button = _gps_location

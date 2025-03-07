@@ -13,9 +13,11 @@ pip install streamlit-gps-location
 ```python
 import streamlit as st
 
-from streamlit_gps_location import gps_location
+from streamlit_gps_location import gps_location_button
 
-value = gps_location()
+data = gps_location_button(
+    buttonText="Get my location"
+)
 
-st.write(value)
+st.write(data)
 ```
