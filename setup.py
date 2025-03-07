@@ -7,7 +7,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setuptools.setup(
     name="streamlit-gps-location",
-    version="0.0.2",
+    version="0.0.3",
     author="Loc Dac",
     author_email="daclocbd123@gmail.com",
     description="Streamlit component that allows you to get GPS location from browser",

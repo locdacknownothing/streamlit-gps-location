@@ -13,7 +13,7 @@ pip install streamlit-gps-location
 ```python
 import streamlit as st
 
-from gps_location import gps_location
+from streamlit_gps_location import gps_location
 
 value = gps_location()
 
