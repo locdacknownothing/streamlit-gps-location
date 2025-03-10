@@ -4,7 +4,8 @@ import {
   ComponentProps,
 } from "streamlit-component-lib"
 import React, { useEffect, useState, ReactElement } from "react"
-import useLocation from "./hooks/useLocation"
+// import useLocation from "./hooks/useLocation"
+import { useGeolocated } from "react-geolocated"
 import "./GpsLocation.css"
 
 interface LocationData {
@@ -18,37 +19,19 @@ interface LocationData {
 interface GpsLocationProps extends ComponentProps {
   args: {
     buttonText: string
-    callbackTriggered?: boolean
   }
 }
 
 function GpsLocation({ args }: GpsLocationProps): ReactElement {
   const buttonText = args.buttonText || "Get Location"
 
-  // const [location, setLocation] = useState<LocationData>({
-  //   latitude: null,
-  //   longitude: null,
-  //   accuracy: null,
-  //   error: null,
-  //   loading: false,
-  // })
-
-  // const getGpsLocation = () => {
-  // setLocation((prev) => ({
-  //   ...prev,
-  //   loading: true,
-  //   error: null,
-  // }))
-
-  // // Check if geolocation is supported by the browser
-  // if (!navigator.geolocation) {
-  //   setLocation((prev) => ({
-  //     ...prev,
-  //     error: "Geolocation is not supported by your browser",
-  //     loading: false,
-  //   }))
-  //   return
-  // }
+  const [locationData, setLocationData] = useState<LocationData>({
+    latitude: null,
+    longitude: null,
+    accuracy: null,
+    error: null,
+    loading: true,
+  })
 
   // // Function to handle successful location retrieval
   // const handleSuccess = (position: GeolocationPosition) => {
@@ -113,56 +96,78 @@ function GpsLocation({ args }: GpsLocationProps): ReactElement {
   // )
   // }
 
-  // // Initialize component and set frame height
-  // useEffect(() => {
-  //   Streamlit.setFrameHeight()
-  // }, [])
-
   const options: PositionOptions = {
     enableHighAccuracy: true, // Use GPS if available
-    timeout: 10000, // Time to wait before error (5 seconds)
+    timeout: 10000, // Time to wait before error (10 seconds)
     maximumAge: 0, // Don"t use cached position
   }
 
-  const [location, accuracy, error, loading, getLocation] = useLocation(
-    true,
-    500,
-    5000,
-    options
-  )
-  const [locationData, setLocationData] = useState<LocationData>({
-    latitude: null,
-    longitude: null,
-    accuracy: null,
-    error: null,
-    loading: false,
-  })
+  const { coords, isGeolocationAvailable, isGeolocationEnabled, getPosition } =
+    useGeolocated({
+      positionOptions: options,
+      watchPosition: false,
+      userDecisionTimeout: 5000,
+      // suppressLocationOnMount: true,
+    })
 
   const handleLocation = () => {
-    getLocation()
-
-    setLocationData((prev) => ({
-      ...prev,
-      loading: true, // Show loading state immediately
-      error: null,
-    }))
-  }
-
-  if (!loading && (location || error)) {
-    const newLocation: LocationData = {
-      latitude: location?.lat ?? null,
-      longitude: location?.lng ?? null,
-      accuracy: accuracy || null,
-      error: error || null,
-      loading: false,
+    if (!isGeolocationAvailable) {
+      setLocationData((prev) => ({
+        ...prev,
+        loading: false,
+        error: "Geolocation is not supported by your browser",
+      }))
+      return
     }
 
-    // Prevent unnecessary rerenders
-    if (JSON.stringify(newLocation) !== JSON.stringify(locationData)) {
-      setLocationData(newLocation)
-      Streamlit.setComponentValue(newLocation)
+    if (!isGeolocationEnabled) {
+      setLocationData((prev) => ({
+        ...prev,
+        loading: false,
+        error: "Geolocation is disabled",
+      }))
+      return
     }
+
+    if (!getPosition) {
+      setLocationData((prev) => ({
+        ...prev,
+        loading: false,
+        error: "Unable to retrieve location at this time.",
+      }))
+      return
+    }
+
+    // Set loading state
+    setLocationData((prev) => ({ ...prev, loading: true, error: null }))
+
+    // getPosition()
+
+    // Wait for location to be retrieved
+    setTimeout(() => {
+      if (!coords) {
+        setLocationData((prev) => ({
+          ...prev,
+          loading: false,
+          error: "Failed to retrieve location.",
+        }))
+      } else {
+        setLocationData({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy: coords.accuracy,
+          error: null,
+          loading: false,
+        })
+      }
+    }, 500)
   }
+
+  useEffect(() => {
+    if (!locationData.loading) {
+      Streamlit.setComponentValue(locationData)
+    }
+  }, [locationData])
 
   // Ensure frame height is set correctly
   useEffect(() => {
