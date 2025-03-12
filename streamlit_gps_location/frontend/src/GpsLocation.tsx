@@ -12,7 +12,7 @@ interface LocationData {
   latitude: number | null
   longitude: number | null
   accuracy: number | null
-  error: string | null
+  error: string | object | null
   loading: boolean
 }
 
@@ -30,127 +30,79 @@ function GpsLocation({ args }: GpsLocationProps): ReactElement {
     longitude: null,
     accuracy: null,
     error: null,
-    loading: true,
+    loading: false,
   })
 
-  // // Function to handle successful location retrieval
-  // const handleSuccess = (position: GeolocationPosition) => {
-  //   const newLocation = {
-  //     latitude: position.coords.latitude,
-  //     longitude: position.coords.longitude,
-  //     accuracy: position.coords.accuracy,
-  //     error: null,
-  //     loading: false,
-  //   }
-  //   setLocation(newLocation)
-
-  //   // Send the location data back to Streamlit
-  //   Streamlit.setComponentValue(newLocation)
-  // }
-
-  // // Function to handle errors
-  // const handleError = (error: GeolocationPositionError) => {
-  //   let errorMessage: string
-
-  //   switch (error.code) {
-  //     case error.PERMISSION_DENIED:
-  //       errorMessage = "User denied the request for geolocation"
-  //       break
-  //     case error.POSITION_UNAVAILABLE:
-  //       errorMessage = "Location information is unavailable"
-  //       break
-  //     case error.TIMEOUT:
-  //       errorMessage = "The request to get user location timed out"
-  //       break
-  //     default:
-  //       errorMessage = "An unknown error occurred"
-  //       break
-  //   }
-
-  //   const errorState = {
-  //     latitude: null,
-  //     longitude: null,
-  //     accuracy: null,
-  //     error: errorMessage,
-  //     loading: false,
-  //   }
-
-  //   setLocation(errorState)
-
-  //   // Send error state back to Streamlit
-  //   Streamlit.setComponentValue(errorState)
-  // }
-
-  // // Options for geolocation
-  // const options: PositionOptions = {
-  //   enableHighAccuracy: true, // Use GPS if available
-  //   timeout: 10000, // Time to wait before error (5 seconds)
-  //   maximumAge: 0, // Don"t use cached position
-  // }
-
-  // // Get the current position
-  // navigator.geolocation.getCurrentPosition(
-  //   handleSuccess,
-  //   handleError,
-  //   options
-  // )
-  // }
-
   const options: PositionOptions = {
-    enableHighAccuracy: true, // Use GPS if available
-    timeout: 10000, // Time to wait before error (10 seconds)
-    maximumAge: 0, // Don"t use cached position
+    enableHighAccuracy: true,
+    timeout: 3000, // Time to wait before error (10 seconds)
+    maximumAge: 0, // Don't use cached position
   }
 
-  const { coords, isGeolocationAvailable, isGeolocationEnabled, getPosition } =
-    useGeolocated({
-      positionOptions: options,
-      watchPosition: false,
-      userDecisionTimeout: 5000,
-      // suppressLocationOnMount: true,
-    })
+  const {
+    coords,
+    isGeolocationAvailable,
+    isGeolocationEnabled,
+    positionError,
+  } = useGeolocated({
+    positionOptions: options,
+    watchPosition: false,
+    userDecisionTimeout: 5000,
+  })
 
   const handleLocation = () => {
     if (!isGeolocationAvailable) {
-      setLocationData((prev) => ({
-        ...prev,
-        loading: false,
+      setLocationData({
+        latitude: null,
+        longitude: null,
+        accuracy: null,
         error: "Geolocation is not supported by your browser",
-      }))
+        loading: false,
+      })
       return
     }
 
     if (!isGeolocationEnabled) {
-      setLocationData((prev) => ({
-        ...prev,
-        loading: false,
+      setLocationData({
+        latitude: null,
+        longitude: null,
+        accuracy: null,
         error: "Geolocation is disabled",
-      }))
+        loading: false,
+      })
       return
     }
 
-    if (!getPosition) {
-      setLocationData((prev) => ({
-        ...prev,
+    if (positionError) {
+      setLocationData({
+        latitude: null,
+        longitude: null,
+        accuracy: null,
+        error: positionError,
         loading: false,
-        error: "Unable to retrieve location at this time.",
-      }))
+      })
       return
     }
 
     // Set loading state
-    setLocationData((prev) => ({ ...prev, loading: true, error: null }))
-
-    // getPosition()
+    setLocationData({
+      latitude: null,
+      longitude: null,
+      accuracy: null,
+      error: null,
+      loading: true,
+    })
 
     // Wait for location to be retrieved
     setTimeout(() => {
       if (!coords) {
-        setLocationData((prev) => ({
-          ...prev,
-          loading: false,
-          error: "Failed to retrieve location.",
-        }))
+        setLocationData({
+          latitude: null,
+          longitude: null,
+          accuracy: null,
+          error: null,
+          loading: true,
+        })
       } else {
         setLocationData({
           latitude: coords.latitude,
@@ -160,13 +112,12 @@ function GpsLocation({ args }: GpsLocationProps): ReactElement {
           loading: false,
         })
       }
-    }, 500)
+    }, 1000)
   }
 
   useEffect(() => {
-    if (!locationData.loading) {
-      Streamlit.setComponentValue(locationData)
-    }
+    console.log(locationData)
+    Streamlit.setComponentValue(locationData)
   }, [locationData])
 
   // Ensure frame height is set correctly
